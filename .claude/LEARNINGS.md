@@ -51,7 +51,8 @@ This loop is itself a worked example of M7 (living-document obligation): the fil
 
 ## Things that did NOT work and why
 
-(Will populate during development. None yet.)
+- **Lexical-only detection of "this is a design decision" in v0.1.0.** Tried: detect the moment the user makes a request that should trigger a `.claude/thoughts/0N-*.md` design doc by regex-matching ambiguity markers (`ways to`, `approaches`, `tradeoffs`, `brainstorm`, `explore`) in the user prompt. Failed because: real-world architectural requests often don't use ambiguity language — `"implement JWT auth on the API"` is unambiguous but still has multiple design decisions (token storage, refresh strategy, key rotation). The hook stayed silent on those. Mitigation: added a softer Trigger B2 in `user-prompt-submit.sh` for design-decision verbs (`implement|design|architect|build|refactor|migrate|integrate|set up|stand up|wire up|add (a|the|an) (feature|...)`), throttled by "did any thoughts doc get touched in the last hour?". False-positive rate is higher than Trigger B; the suggestion text is softer to compensate.
+- **Pure documentation enforcement of "before code is written".** Tried: relying on CLAUDE.md text alone to instruct the model to write a thoughts/ doc before any non-trivial Write/Edit. Failed because: documentation is advisory; the model can (and will) skip straight to code on any task that doesn't trip a hook. Mitigation: added a `PreToolUse:Write|Edit` advisory hook (`pre-tool-use-write.sh`) that emits a non-blocking systemMessage when the model is about to write a non-trivial file with no recent thoughts/ activity. Throttled to once per 30 min to avoid noise. Skips dotfiles, configs, tests, simple docs, and anything under `.claude/`. Still advisory — doesn't block — because hard-blocking writes would be more disruptive than the discipline is worth.
 
 ## What worked
 

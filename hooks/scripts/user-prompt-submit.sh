@@ -33,10 +33,31 @@ emit_context() {
   exit 0
 }
 
-# --- Trigger B: ambiguity markers --------------------------------------------
+# --- Trigger B: ambiguity markers (strong signal — open-ended exploration) ---
 AMBIG_RE='\b(ways to|approaches|options|tradeoffs|brainstorm|explore|how could we|several ways|different ways)\b'
 if printf '%s' "$PROMPT" | grep -iqE "$AMBIG_RE"; then
   emit_context "This prompt sounds open-ended. Consider running /learn brainstorm \"<topic>\" to dispatch a multi-perspective agent team into .claude/thoughts/ before settling on an approach."
+fi
+
+# --- Trigger B2: design-decision verbs (softer signal — implies architectural choices) ---
+# Catches requests like "implement JWT auth", "design the schema", "build the pipeline"
+# where the user didn't use ambiguity language but architectural decisions are in play.
+# Throttled: only fire if no thoughts/ doc has been created in the current session.
+DESIGN_RE='\b(implement|design|architect|build|introduce|refactor|migrate|integrate|set up|stand up|wire up|add (a|the|an) (feature|ability|capability|support|service|endpoint|module|system))\b'
+if printf '%s' "$PROMPT" | grep -iqE "$DESIGN_RE"; then
+  # Check if any thoughts/ doc was created recently (within this session window).
+  THOUGHTS_DIR="${CLAUDE_PROJECT_DIR:-.}/.claude/thoughts"
+  RECENT_THOUGHTS=0
+  if [ -d "$THOUGHTS_DIR" ]; then
+    # Count thoughts docs modified in the last 60 minutes.
+    if command -v find >/dev/null 2>&1; then
+      RECENT_THOUGHTS=$(find "$THOUGHTS_DIR" -maxdepth 1 -name '*.md' -mmin -60 2>/dev/null | wc -l | tr -d ' ')
+    fi
+  fi
+  # Only nudge if no recent thoughts doc exists — assume the user already has one if they do.
+  if [ "$RECENT_THOUGHTS" = "0" ]; then
+    emit_context "This prompt implies a design decision. If you haven't already, consider running /learn brainstorm \"<topic>\" or creating a .claude/thoughts/0N-<slug>.md design doc BEFORE writing code. The architectural rule from .claude/CLAUDE.md: every design decision goes into thoughts/ before code is written for it."
+  fi
 fi
 
 # --- Trigger C: pivot markers in last assistant message -----------------------
