@@ -1,0 +1,50 @@
+# LEARNINGS — {{PROJECT_NAME}}
+
+Technical journal for {{PROJECT_NAME}} (data pipeline / ETL). Future readers (humans + LLM sessions): this is the playbook, the traps, and the reasoning. Read once, save hours.
+
+## Project goal
+
+{{PROJECT_GOAL_PARAGRAPH}}
+
+(Fill me in: one paragraph. What sources does this pipeline ingest, what destinations does it write to, what is the SLA, what is the partition / watermark / batch contract, who consumes the output. Mention explicit non-goals — e.g. "we are not the system of record for X".)
+
+## Methodology that worked
+
+(Fill me in: the dev loop. A canonical version: write transform → unit-test on a fixture → backfill a single partition in dev → diff against a known-good baseline → schedule in prod → monitor first few runs. The diff-against-baseline step is what catches the silent-correctness bugs; do not skip it.)
+
+## Things that did NOT work and why
+
+(Fill me in. Common pipeline traps: implicit reliance on event ordering that the source doesn't guarantee; dedup keys that turn out not to be unique; UTC-vs-local-time partitioning bugs; `MERGE` statements whose `WHEN MATCHED` arm silently drops late-arriving updates; assuming a column is non-null because production data hasn't shown a null yet.)
+
+## Common patterns and their fixes
+
+- **Schema drift** — source added a column. Pipeline either ignores it (silent data loss for downstream consumers) or fails on load. Fix: source contract tests in CI plus an alerting harness on the load layer. Add the column to the destination schema as a separate, reviewable change.
+- **Missing partition** — upstream didn't write the partition by the time downstream ran. Add an explicit dependency sensor; do not infer presence from time. Document the watermark contract.
+- **Duplicate rows** — dedup key isn't actually unique. Either widen the dedup window or add a tiebreaker column. Re-run affected partitions with the corrected logic.
+- **Watermark drift** — the pipeline's watermark advanced past data that hadn't arrived yet. Audit the late-arrival window. Either widen it (cheap) or implement a corrective backfill (expensive).
+- **Late arrival** — events with `event_time < watermark`. Either drop them with a counter (visible loss), route them to a late-arrival side table, or re-window. Pick one explicitly; don't let the framework default decide.
+- **Deadlock** — concurrent writers to the same partition. Serialise on the destination or shard the partitioning further.
+- **Replica lag** — analytics queries hitting a stale replica. Either route consistency-sensitive queries to the primary or surface the staleness in the response. Don't pretend the replica is current.
+
+(Add project-specific patterns as discovered.)
+
+## Reproducible playbook
+
+1. Clone the repo, install the orchestration tool (`pip install dbt-<adapter>` / `pip install apache-airflow`).
+2. Configure warehouse credentials per `profiles.example.yml` → `~/.dbt/profiles.yml` (or equivalent).
+3. Set `DBT_TARGET=dev` (or similar) so all commands hit the dev schema.
+4. `dbt deps` / `airflow db init`.
+5. Run the existing model/DAG once end-to-end on a small partition to verify the environment.
+6. Make the change.
+7. Run unit tests on fixtures (`pytest`, `dbt test --select <model>`).
+8. Materialise the model into the dev schema, diff against a baseline snapshot.
+9. Open PR; CI runs the same unit + integration suite.
+10. Merge; first prod run is monitored.
+
+## Toolchain setup
+
+(Fill me in: orchestrator and version (Airflow, Dagster, Prefect, dbt, Mage…), warehouse client (`psql`, `bq`, `snowsql`, `databricks`), local fixture engine (DuckDB is a good default), CI runner. Note any warehouse-specific quirks — Snowflake's case-folding, BigQuery's partition limits, Postgres's MVCC behaviour under long transactions.)
+
+## Constraints and gotchas
+
+(Fill me in. Pipeline-specific gotchas often include: `MERGE` semantics across warehouses (Snowflake's `MERGE` differs from BigQuery's); UDF deployment lag versus DAG version skew; timezone handling at partition boundaries; clustered tables silently degrading when clustering keys aren't included in filters; `INSERT OVERWRITE` on partitioned tables behaving differently across engines.)

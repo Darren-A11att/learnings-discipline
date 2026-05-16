@@ -1,0 +1,7 @@
+node_modules/
+*.log
+.DS_Store
+.claude/.learn-state.json
+mcp/test/fixtures/.tmp/
+.env
+.env.local

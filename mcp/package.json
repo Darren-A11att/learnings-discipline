@@ -1,0 +1,9 @@
+{
+  "name": "learnings-mcp-server",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "MCP server for the learnings-discipline plugin",
+  "main": "index.js",
+  "private": true,
+  "engines": { "node": ">=20" }
+}

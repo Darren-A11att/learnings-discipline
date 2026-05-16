@@ -1,0 +1,50 @@
+# LEARNINGS — {{PROJECT_NAME}}
+
+Technical journal for {{PROJECT_NAME}} (web application). Future readers (humans + LLM sessions): this is the playbook, the traps, and the reasoning. Read once, save hours.
+
+## Project goal
+
+{{PROJECT_GOAL_PARAGRAPH}}
+
+(Fill me in: one paragraph. What does this app do, who uses it, what stack is it on, what is the deployment target, what counts as "done" for any given task. Mention explicit non-goals so scope stays bounded.)
+
+## Methodology that worked
+
+(Fill me in: the development loop that actually ships features. A canonical version for a typical web app: implement → typecheck → unit test → component/integration test → e2e smoke → deploy to preview → verify in browser → merge. Note where in that loop bugs are most often caught — that's where to invest time-saving tooling.)
+
+## Things that did NOT work and why
+
+(Fill me in. Common traps for web apps include: client/server state mismatch from `Date.now()` in render, CORS misconfigured for a preview deploy URL, ORM lazy-loading causing N+1 in a hot path, secrets accidentally bundled into the client because they weren't prefixed correctly, hydration mismatches from locale-aware formatting, OOM in CI from headless browser leaks.)
+
+## Common patterns and their fixes
+
+- **500 from a route under load** — check connection-pool exhaustion before suspecting application logic. Log pool stats on the route handler.
+- **Hydration mismatch warning in console** — server rendered different markup than client. Almost always: `Date`, `Math.random`, `localStorage`, or locale-aware formatting in render. Move to `useEffect` or `suppressHydrationWarning` only as a last resort.
+- **CORS rejected** — preflight failed. Check the response headers on the OPTIONS request, not the actual request. The server's CORS allowlist needs the exact origin including protocol and port.
+- **Build timeout in CI** — usually a single large client bundle. Check `next build` / `vite build` size report; lazy-load the offender.
+- **Flaky test** — almost always timing. Replace `setTimeout` waits with `waitFor` / explicit assertion polling. Never sleep.
+- **Stuck deploy** — check the build logs on the platform (Vercel, Fly, Render, etc.) rather than the Git push status. The deploy may be holding for a health check.
+- **OOM in CI** — usually leaked browser instances from e2e tests. Add `--max-workers=2` and confirm browsers are closed in `afterAll`.
+
+(Add project-specific patterns as they're discovered.)
+
+## Reproducible playbook
+
+1. `nvm use` (or `asdf install`) — pin the Node version to `.nvmrc`.
+2. `npm ci` — clean install from lockfile.
+3. Copy `.env.example` → `.env.local`, fill in dev credentials per the secret-management doc.
+4. `npm run db:migrate` (or equivalent) — apply migrations to local DB.
+5. `npm run dev` — start the dev server.
+6. `npm test` — confirm baseline tests pass before changes.
+7. Make the change. Add or update tests.
+8. `npm run lint && npm run typecheck && npm test` — full local gate before pushing.
+9. Push branch; verify the preview deploy URL renders the change.
+10. Merge.
+
+## Toolchain setup
+
+(Fill me in: exact versions for Node, package manager, database, browser-test tooling. Note any traps — incompatible TypeScript/ESLint versions, native modules that need a specific Node ABI, platform-specific Playwright deps.)
+
+## Constraints and gotchas
+
+(Fill me in. Web-specific gotchas often include: BSD `sed -i` vs GNU; cookie SameSite differences between localhost and production; `fetch` body-stream consumption; React StrictMode double-invocation surfacing effects bugs only in dev; ESM/CJS interop traps; bundler tree-shaking false-positives.)

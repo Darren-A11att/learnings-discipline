@@ -1,0 +1,29 @@
+{
+  "name": "learnings-discipline",
+  "version": "0.1.0",
+  "description": "Auto-detects when to scaffold institutional memory (CLAUDE.md + LEARNINGS.md), capture failures and wins, and brainstorm complex tasks into thoughts/. Distillation of the documentation methodology that shipped Clean iOS 26 v1.1.",
+  "author": {
+    "name": "Darren-A11att",
+    "email": "darren.allatt@gmail.com"
+  },
+  "homepage": "https://github.com/Darren-A11att/learnings-discipline",
+  "repository": "https://github.com/Darren-A11att/learnings-discipline",
+  "license": "MIT",
+  "keywords": [
+    "documentation",
+    "institutional-memory",
+    "discipline",
+    "methodology",
+    "claude-code",
+    "learnings",
+    "brainstorm"
+  ],
+  "skills": "./skills/",
+  "agents": [
+    "./agents/learnings-auditor.md",
+    "./agents/brainstorm-perspective.md",
+    "./agents/brainstorm-synthesizer.md"
+  ],
+  "hooks": "./hooks/hooks.json",
+  "mcpServers": "./.mcp.json"
+}

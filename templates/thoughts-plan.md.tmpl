@@ -1,0 +1,186 @@
+# 00 — PLAN: {{TOPIC}}
+
+<!--
+This file is the synthesis output of a multi-perspective brainstorm.
+It is read alongside the {{PERSPECTIVE_COUNT}} perspective files in
+the same directory; the synthesiser's job here is to extract a single
+actionable plan from the perspectives without flattening their
+disagreements into mush.
+
+The plan should be opinionated. If, after reading the perspectives,
+the right move is unclear, say so explicitly in the "Open questions
+deferred" section — do not paper over it.
+-->
+
+## 1. Context
+
+<!--
+Restate the actual goal in one paragraph. What is the user asking
+for, stripped of brainstorm framing? What would "done" look like?
+What is explicitly out of scope?
+-->
+
+(Fill me in: one paragraph restating the actual goal of {{TOPIC}}.)
+
+## 2. The {{PERSPECTIVE_COUNT}} perspectives in brief
+
+<!--
+One short paragraph per perspective. Cite the file. Mention the
+angle's name, its central claim, and one concrete piece of evidence
+it brings. The reader should be able to skip the perspective files
+and still understand the synthesis.
+-->
+
+- **01 — (angle name)** (`.claude/thoughts/01-…md`): (one-sentence claim, one piece of evidence.)
+- **02 — (angle name)** (`.claude/thoughts/02-…md`): (one-sentence claim, one piece of evidence.)
+- **03 — (angle name)** (`.claude/thoughts/03-…md`): (one-sentence claim, one piece of evidence.)
+<!-- … extend to {{PERSPECTIVE_COUNT}} entries … -->
+
+## 3. Where they genuinely disagree
+
+<!--
+List the load-bearing disagreements only. Skip the cosmetic ones.
+For each: name the disagreement, name which perspectives sit on which
+side, and say what evidence would settle it. If the disagreement
+cannot be settled with available evidence, mark it as a value choice
+and route it to "Open questions deferred" or the synthesised plan's
+Phase 0.
+-->
+
+- **Disagreement 1**: (name it). (Perspective A) says X; (Perspective B) says Y. Settled by: (evidence) / Unsettleable, treat as: (value choice owned by user).
+- **Disagreement 2**: …
+- **Disagreement 3**: …
+
+(End with a one-paragraph "honest synthesis" that says, perspective
+by perspective, which parts you're taking and which parts you're
+leaving on the floor and why.)
+
+## 4. The synthesised plan
+
+<!--
+Phases. Each phase has a goal, a numbered list of steps, and exit
+criteria. Phases are ordered so that earlier phases unblock later
+ones; do not invent dependencies that aren't real.
+
+A good phase is one sitting to one week of evenings of work. If a
+phase is "rewrite everything", split it.
+-->
+
+### Phase 0 — (name) (~time budget)
+
+Goal: (one sentence).
+
+1. (Step.)
+2. (Step.)
+3. (Step.)
+
+Exit criteria: (observable conditions).
+
+### Phase 1 — (name) (~time budget)
+
+Goal: (one sentence).
+
+1. (Step.)
+2. (Step.)
+3. (Step.)
+
+Exit criteria: (observable conditions).
+
+### Phase 2 — (name) (~time budget)
+
+Goal: (one sentence).
+
+1. (Step.)
+2. (Step.)
+3. (Step.)
+
+Exit criteria: (observable conditions).
+
+<!--
+Add Phase 3, 4, … only if genuinely needed. Bias toward fewer phases
+with sharper exit criteria.
+-->
+
+## 5. Anti-patterns
+
+<!--
+The shapes of work this plan is explicitly NOT doing, and why.
+Listing them here protects the plan from drift mid-execution: when
+someone (including future-you) is tempted to expand scope, this
+section is the receipt that says "we already considered that and
+chose not to".
+
+Pull the strongest anti-patterns directly from the perspectives'
+"Tradeoffs" sections.
+-->
+
+- **Not doing**: (shape of work). Why: (reference to perspective N's tradeoff analysis).
+- **Not doing**: …
+- **Not doing**: …
+
+## 6. Success criteria
+
+<!--
+Observable, falsifiable conditions under which the whole plan is
+judged complete. Distinct from per-phase exit criteria. A single
+top-level criterion is fine; three to five is typical.
+-->
+
+- (Criterion 1: observable.)
+- (Criterion 2: observable.)
+- (Criterion 3: observable.)
+
+## 7. Effort budget
+
+<!--
+Order-of-magnitude estimate for the whole plan: hours/evenings/weeks,
+dollars (if API or cloud spend is involved), and the rough split
+across phases. If a phase is open-ended ("until it works"), say so
+explicitly — that's a signal to the user that a hard cutoff is
+needed.
+-->
+
+- Phase 0: (estimate)
+- Phase 1: (estimate)
+- Phase 2: (estimate)
+- Total: (estimate, dollars if relevant)
+
+## 8. Risks
+
+<!--
+What could cause this plan to fail or need replanning? Pair each
+risk with a mitigation or a tripwire. Risks without mitigations are
+just worry; risks with tripwires are project management.
+-->
+
+- **Risk**: (what could go wrong). **Tripwire**: (what we'd observe). **Mitigation**: (what we'd do).
+- **Risk**: …
+- **Risk**: …
+
+## 9. Open questions deferred
+
+<!--
+Questions the synthesis cannot answer without input. Distinguish:
+  - Owner: user (preferences, constraints, priorities)
+  - Owner: empirical work in Phase 0
+  - Owner: another perspective (file a follow-up brainstorm)
+
+A plan with zero deferred questions is suspicious — either the
+problem was trivially small or the synthesis silently made choices
+the user should have made.
+-->
+
+- (Question. Owner: user / Phase 0 / follow-up brainstorm.)
+- (Question. Owner: …)
+- (Question. Owner: …)
+
+## 10. Monday-morning first step
+
+<!--
+The single smallest concrete action that starts execution. Should be
+runnable in under two hours, produce an artefact (file, commit,
+measurement), and not require any of the deferred questions to be
+answered first. If you can't find one, the plan isn't ready.
+-->
+
+(Fill me in: one concrete shell-runnable / editor-runnable action.)

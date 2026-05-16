@@ -1,0 +1,48 @@
+# LEARNINGS — {{PROJECT_NAME}}
+
+Technical journal for {{PROJECT_NAME}} (command-line tool). Future readers (humans + LLM sessions): this is the playbook, the traps, and the reasoning. Read once, save hours.
+
+## Project goal
+
+{{PROJECT_GOAL_PARAGRAPH}}
+
+(Fill me in: one paragraph. What problem does this CLI solve, who runs it, on which platforms, what does "shippable" mean — packaged for Homebrew? pipx? apt? Just `go install`? Mention explicit non-goals.)
+
+## Methodology that worked
+
+(Fill me in: the dev loop. A canonical version: implement → unit test the pure functions → integration-test the CLI surface via shell-out against a temp dir → run against a real input fixture → release. The integration tests are where most CLI bugs hide — stream behaviour, exit codes, tty detection — invest there.)
+
+## Things that did NOT work and why
+
+(Fill me in. Common CLI traps include: assuming stdout is a tty when it isn't (breaks colour and progress bars in pipelines), ignoring SIGPIPE (the tool crashes when piped to `head`), eager argument parsing that breaks `--` separators, completion scripts that import the whole tool just to list flags, packaging that bundles platform-specific shared libs.)
+
+## Common patterns and their fixes
+
+- **Tool exits non-zero on success when piped to `head`** — SIGPIPE not handled. In Python: `signal.signal(signal.SIGPIPE, signal.SIG_DFL)` at startup. In Go: detect `errors.Is(err, syscall.EPIPE)` on write errors and exit 0.
+- **Broken pipe traceback** — same root cause. Same fix.
+- **Coloured output appearing in log files** — code is checking `os.environ["TERM"]` instead of `sys.stdout.isatty()`. Use the tty check; respect `NO_COLOR` env var.
+- **`tty detection wrong` in CI** — CI runners often present a non-tty stdout but a tty stderr. Check the specific stream you're writing to.
+- **Signal not handled** — async runtimes (asyncio, tokio) intercept SIGINT and require explicit handler registration. A bare `Ctrl-C` does nothing in some configurations.
+- **Completion script broken after a flag rename** — completions are generated, not hand-written. Regenerate them as part of the release process; don't commit stale ones.
+- **Non-zero exit from a successful run** — almost always a flushed-buffer error on shutdown after the real work finished. Wrap final flush in a SIGPIPE-tolerant handler.
+
+(Add project-specific patterns as discovered.)
+
+## Reproducible playbook
+
+1. Clone the repo, `cd` in.
+2. Set up the language toolchain pinned in the repo (`.python-version`, `go.mod`, `rust-toolchain.toml`).
+3. Install dev deps: `pip install -e .[dev]` / `go mod download` / `cargo build`.
+4. Run unit tests.
+5. Run integration / golden-output tests.
+6. Smoke-test the binary against a real input fixture in `tests/fixtures/`.
+7. Build a release artefact and re-run smoke tests against the built binary, not the source — they catch different bugs.
+8. Bump version, tag, push, let the release pipeline publish.
+
+## Toolchain setup
+
+(Fill me in: exact language version, package manager, test runner, release pipeline. Note packaging-specific tooling — `goreleaser`, `maturin`, `pyinstaller`, a Homebrew formula in a tap repo.)
+
+## Constraints and gotchas
+
+(Fill me in. CLI-specific gotchas often include: argparse's `nargs="?"` vs `nargs="*"` ambiguity; click's `standalone_mode` flag changing exception behaviour; `os.execvp` not closing file descriptors; Windows lacking `os.fork`; pipx installs being shadowed by system installs; Homebrew formula audit rules disallowing `bottle :unneeded` in modern versions.)

@@ -1,0 +1,172 @@
+# {{PERSPECTIVE_NUMBER}} — {{ANGLE_NAME}}: {{ANGLE_DESCRIPTION}}
+
+<!--
+This is one perspective in a multi-perspective brainstorm on {{TOPIC}}.
+A perspective is a single coherent argument, written as if it were the
+only voice in the room. Do not hedge against the other perspectives in
+this document — the synthesis step is where reconciliation happens.
+
+Rules of engagement for the author (human or model):
+
+1. Pick a strong angle and commit to it. A perspective that says
+   "well, it depends" is not useful input to the synthesiser.
+2. Cite concrete evidence whenever possible — file paths, command
+   outputs, line counts, measured durations. Vibes don't survive
+   synthesis.
+3. Length target: 200–400 lines. Below 200 usually means the angle
+   wasn't fully developed; above 400 usually means two angles got
+   conflated and should be split.
+4. Use the section template below verbatim. The synthesiser greps for
+   these headings.
+-->
+
+## Context
+
+<!--
+What is the situation that motivates this perspective? Restate the
+problem from this angle's point of view. One paragraph, no more.
+What does this angle consider load-bearing about the problem that the
+other angles might under-weight?
+-->
+
+(Fill me in: one paragraph framing {{TOPIC}} from the {{ANGLE_NAME}} angle.)
+
+## Claim
+
+<!--
+The single sentence that, if accepted, determines the recommendation.
+If you can't compress your perspective into one sentence here, you
+have two perspectives, not one.
+-->
+
+(Fill me in: one sentence. The thesis.)
+
+## Evidence
+
+<!--
+The supporting facts. Prefer:
+  - file paths with line numbers
+  - command outputs (paste, don't paraphrase)
+  - measured numbers (counts, durations, sizes)
+  - prior-art citations (other projects, papers, postmortems)
+
+Avoid:
+  - "I think" / "it feels like" / "in my experience" without a
+    referenceable session or transcript
+  - hypothetical scenarios presented as fact
+
+Aim for 5–10 concrete evidence items. Each item should be one short
+paragraph or one bullet with a citation.
+-->
+
+- (Evidence 1: …)
+- (Evidence 2: …)
+- (Evidence 3: …)
+- (Evidence 4: …)
+- (Evidence 5: …)
+
+### Worked example
+
+<!--
+One end-to-end example showing the perspective in action. The example
+should be small enough to fit on a screen but real enough that the
+synthesiser can sanity-check the claim against it. If the example is
+hypothetical, label it so explicitly.
+-->
+
+(Fill me in: a concrete, minimal example that demonstrates the claim.)
+
+## Tradeoffs
+
+<!--
+What does this perspective give up? Every strong position has costs.
+Naming them here is what distinguishes a perspective from a sales
+pitch — and gives the synthesiser the data it needs to weigh this
+voice against the others.
+
+Cover at minimum:
+  - What this approach is bad at
+  - What it assumes about the environment / user / future
+  - What it would cost (time, money, complexity, ongoing maintenance)
+  - What classes of failure it does not address
+-->
+
+- **Gives up**: (what capability or property this approach sacrifices)
+- **Assumes**: (preconditions that, if violated, invalidate the claim)
+- **Costs**: (concrete resources — hours, dollars, cognitive load)
+- **Does not address**: (problems adjacent to {{TOPIC}} this angle ignores)
+
+## Recommendation
+
+<!--
+The actionable output of this perspective. A numbered list of
+concrete steps the project should take if this perspective wins.
+Each step should be small enough to execute in one sitting and
+specific enough that someone else could do it without you.
+
+If your recommendation is "do nothing" or "more research needed",
+your perspective probably isn't ready to be a perspective — push
+back on the framing instead.
+-->
+
+1. (Step 1: concrete, verifiable)
+2. (Step 2: concrete, verifiable)
+3. (Step 3: concrete, verifiable)
+4. (Step 4: concrete, verifiable)
+5. (Step 5: concrete, verifiable)
+
+### Exit criteria
+
+<!--
+How would the project know this perspective's recommendation succeeded?
+State the observable, falsifiable outcome. "Code is cleaner" is not
+exit criteria. "Build time drops below 90s on M2" is.
+-->
+
+(Fill me in: observable conditions under which this perspective's
+recommendation is judged complete.)
+
+## Open questions
+
+<!--
+Things this perspective deliberately does not answer, and would need
+input on before going further. These often become the seeds of the
+synthesis step's "deferred" list.
+
+Distinguish:
+  - questions only the user can answer (preferences, constraints)
+  - questions another perspective should answer
+  - questions that need empirical work
+-->
+
+- (Open question 1: …)
+- (Open question 2: …)
+- (Open question 3: …)
+
+## Notes for the synthesiser
+
+<!--
+Optional. If you anticipate where another perspective will push back,
+flag it here. Don't argue with them — the synthesiser will do that.
+Just point at the seam.
+
+Examples:
+  - "Perspective 02 will likely argue X; the relevant evidence is at
+    line N above."
+  - "If the user prioritises Y over Z, this perspective collapses."
+-->
+
+(Fill me in if useful; delete this section otherwise.)
+
+<!--
+End of perspective {{PERSPECTIVE_NUMBER}}.
+
+Before committing, run the self-check:
+  [ ] Claim is one sentence.
+  [ ] At least 5 concrete evidence items, each with a citation.
+  [ ] Tradeoffs section is not empty.
+  [ ] Recommendation is a numbered list of small steps.
+  [ ] Exit criteria are observable.
+  [ ] Open questions are categorised by who answers them.
+  [ ] File is between 200 and 400 lines.
+-->

@@ -1,0 +1,49 @@
+# {{PROJECT_NAME}} — Claude operating instructions
+
+## Required first step: read LEARNINGS.md
+
+Before responding to any task in this repo — DAG definitions, transforms, backfills, schema evolution, dedup logic, watermarking, partitioning, replication, anything data-pipeline-related — you **MUST** read `.claude/LEARNINGS.md` and treat the lessons there as authoritative for this codebase.
+
+You must consult LEARNINGS.md not only when the user's request is literally identical to a section heading, but whenever it is semantically or conceptually similar. Examples that should trigger a re-read:
+
+- User mentions any keyword close to: DAG, airflow, dbt, ETL, ingest, transform, schema drift, dedup, idempotent, backfill, watermark, late data, partition, parquet, ORC, columnstore, OLAP, OLTP, replication lag, lock contention, deadlock, eventual consistency
+- User describes symptoms that match issues documented there (schema drift, missing partition, duplicate rows, watermark drift, late arrival, deadlock, replica lag)
+- User asks about an adjacent pipeline or model in the same warehouse, even if not this one
+- User asks "how did we do X before" or "what did we learn about Y"
+
+If the user's request is conceptually related but not perfectly aligned, **re-read LEARNINGS.md anyway** and tell the user which prior learning is closest before proposing a new approach. Do not silently re-derive a solution that section X already records — cite section X.
+
+## How to read LEARNINGS.md effectively
+
+It is structured by topic. Skim every `##` heading first. Then read the sections most relevant to the current task. The "Things that did NOT work" and "Common patterns and their fixes" sections are especially valuable — most failure modes have already been hit in this project, and re-hitting them costs hours.
+
+## Working in this repo
+
+- All transforms must be **idempotent**: re-running for a partition must produce the same result. If a transform isn't idempotent, it's a bug, not a feature.
+- Backfills run through the same DAG as production, with a flag — never an ad-hoc script.
+- Schema changes are versioned: a new column is additive; renames go through an additive-then-deprecate cycle.
+- Sample data lives in `tests/fixtures/`; never commit production data, even anonymised, without explicit sign-off.
+
+## When the user asks for a new feature or bug fix
+
+1. Read LEARNINGS.md (always).
+2. State which prior learning(s) apply and the playbook step you're about to execute.
+3. Use the debug loop described in LEARNINGS.md — for any "missing rows" or "duplicate rows" question, query the source partition and the destination partition directly and diff them. Reason from the data, not from the DAG diagram.
+4. Implement, run the test loop (unit-test the SQL/Python transform locally against a fixture, then dry-run the DAG in a dev environment), iterate.
+
+## When the user asks "how did this work?"
+
+Answer with cited references to LEARNINGS.md sections. Do not paraphrase from memory if the file is authoritative.
+
+## When updating LEARNINGS.md
+
+If during a session you discover a new failure mode, a new working pattern, or a refinement of an existing pattern — append a new section to LEARNINGS.md and tell the user. The file is the project's institutional memory; keeping it current is part of every task.
+
+## Toolchain quick reference
+
+(See LEARNINGS.md §"Toolchain setup" for full setup. The most-used commands:)
+
+- `dbt run --select <model>` / `airflow dags test <dag> <date>` — single-model / single-dag dry runs
+- `dbt test` / project-specific data quality harness — run assertions
+- Query the warehouse directly via `psql` / `bq` / `snowsql` — never debug a transform without first eyeballing the rows
+- Local DuckDB / SQLite fixture harness in `tests/` for unit-level SQL testing

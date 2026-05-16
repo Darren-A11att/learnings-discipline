@@ -1,0 +1,205 @@
+# LEARNINGS — {{PROJECT_NAME}}
+
+Technical journal for Android APK modding work on {{PROJECT_NAME}}. Future readers: this is the playbook, the traps, and the reasoning. Read once, save hours.
+
+## Project goal
+
+{{PROJECT_GOAL_PARAGRAPH}}
+
+(Fill me in: one paragraph. What upstream APK are you modding, what device class targets it, what is the success criterion — usually "installs and runs without crashes with the targeted SDK surface neutralised". Mention explicit non-goals so the scope stays bounded.)
+
+## Methodology that worked — the four layers
+
+Ads and integrity defences in modern Play Store apps are layered. Patching one layer leaks crashes from the next. Work outside-in:
+
+- **Layer 0 — Defeat anti-tamper (Pairip).** Nothing else matters if the app self-kills on signature mismatch. Stub `SignatureCheck.verifyIntegrity` (and equivalents) to `return-void`, remove the `LicenseActivity` / `LicenseContentProvider` from the manifest. Do this first because every later change re-signs the APK, which trips the check.
+- **Layer 1 — Manifest scrub.** Auto-init providers, activities, services, receivers, and meta-data are how SDKs bootstrap before any app code runs. Strip them by `android:name` prefix match against a known-bad list. This alone removes the majority of ad surface and most network calls.
+- **Layer 2 — Stub SDK init entry points.** `MobileAds.initialize`, `AudienceNetworkAds.initialize`, `PAGSdk.init`, AppLovin SDK init, etc. The app's own code calls these from `Application.onCreate` or first activity. Replace bodies with no-ops.
+- **Layer 3 — Leave the SDK dex bytecode in place.** Do **not** delete the ad SDK classes. The app references them via reflection, `Class.forName`, and direct class literals scattered through obfuscated code; removing them yields `ClassNotFoundException` from places you can't easily find. Dead classes are cheap; missing classes are fatal.
+
+Order matters because each layer's failure modes mask the next layer's bugs.
+
+## Architecture matters — the v7a vs arm64 lesson
+
+Modern flagships (Dimensity 9000+, Snapdragon 8 Gen series) are 64-bit-only with no AArch32 userspace. A `armeabi-v7a`-only split installs with `INSTALL_FAILED_NO_MATCHING_ABIS`.
+
+Lesson: **always `unzip -l <split>.apk | grep "lib/"` before committing to a build.** Mirror sites (APKPure et al.) sometimes hand out v7a-flavoured xapks based on browser fingerprint. The file looks complete; the device disagrees.
+
+## Pairip integration tiers
+
+Pairip ships in two distinct flavours. Identifying which one you're up against decides whether the project is feasible at all.
+
+- **License-only Pairip.** Manifest has `LicenseActivity` and `LicenseContentProvider`; smali has a `SignatureCheck` class with a `verifyIntegrity` method. Defeat: stub `verifyIntegrity` to `return-void`, delete the manifest entries. Done.
+- **VMP-protected Pairip.** Real method bodies are replaced at build time with calls to `com.pairip.VMRunner.invoke(...)`. The original bytecode is encrypted and lives inside `libpairipcore.so`. Without the matching native lib every VMP'd method becomes a hole that returns `null` / `0`. Cascading NPEs surface in unrelated code: protobuf parsers crash, `Service.onCreate` crashes, `AlarmService` crashes.
+
+**VMP cannot be defeated by smali patching.** Either obtain a build that ships the matching `libpairipcore.so` (the user's installed APK does, by definition), or pick a different upstream that doesn't ship VMP.
+
+## The pivot that worked
+
+When upstream mirrors fail (wrong ABI, VMP without lib), `adb pull` the user's already-installed APK off the device:
+
+```
+adb shell pm path <package.name>
+adb pull /data/app/.../base.apk
+```
+
+Why this works:
+
+- ABI is guaranteed correct — Play Store delivered exactly what this device runs.
+- Native libs are present and matched, including `libpairipcore.so` if VMP is used.
+- The Play Store sometimes ships a lighter Pairip integration (license-only) than what mirrors carry, depending on the rollout track.
+
+Use the device as your source of truth whenever the user already has the app installed.
+
+## Single-APK vs splits tradeoff
+
+Play Store delivery is `base.apk + config.<abi>.apk + config.<density>.apk`. `adb install-multiple` requires all three signed with the same key. Apktool **cannot cleanly rebuild config splits** — they have no `<application>` tag, the manifest is structurally minimal, and reassembly produces APKs the installer rejects.
+
+Workaround: collapse to a single fat APK.
+
+1. Extract `lib/<abi>/*.so` from the ABI split.
+2. Place them into `decoded/lib/<abi>/` of the apktool'd base.
+3. Remove `requiredSplitTypes` and `isSplitRequired` attributes from the `<manifest>` tag.
+4. Set `android:extractNativeLibs="true"` on `<application>`.
+5. `apktool b`, sign, install single APK.
+
+Density splits are usually safe to drop entirely.
+
+## Coexistence via package rename
+
+To install the modded build alongside the original, rename the package consistently. Sites to update — miss any one and you get silent provider crashes:
+
+- `<manifest package="...">` in AndroidManifest.xml
+- Every `android:authorities="..."` (FileProvider, WorkManager, ad SDKs leaving residue)
+- Every `<permission android:name="...">` and `<uses-permission>` referencing the app's own permissions
+- **Every smali file containing the old package as a literal string.** `grep -rl '"<old.package>"' smali*/` typically returns 8–15 hits — launchers and similar apps construct ContentProvider URIs and intent actions from hardcoded strings; obfuscators skip them.
+
+## App display label
+
+`android:label="@string/app_name"` almost always resolves to a `<string name="app_name">` in `res/values/strings.xml`. Update only the default locale file — Android falls back to it when a localised variant is missing.
+
+## Toolchain setup on macOS (no sudo path)
+
+```
+brew install apktool android-platform-tools openjdk@21 android-commandlinetools
+export JAVA_HOME=/opt/homebrew/opt/openjdk@21
+sdkmanager "build-tools;34.0.0" "platform-tools"
+```
+
+- **Avoid `brew install --cask temurin`** — requires sudo for the pkg installer and fails non-interactively. The keg-only `openjdk@21` formula needs no sudo and works fine for apktool, apksigner, and zipalign.
+- Build tools live at `/opt/homebrew/share/android-commandlinetools/build-tools/<v>/`. Binaries: `zipalign`, `apksigner`, `aapt`, `aapt2`.
+
+## The debug loop is logcat, not Android Studio
+
+Modded smali has no source map. The IDE debugger is useless. The actual loop is tight and text-based:
+
+```
+adb shell monkey -p <package> -c android.intent.category.HOME 1
+adb logcat -d -b crash -t 200 | grep -A30 "FATAL EXCEPTION"
+```
+
+Each crash points at one specific class/method. Patch it, rebuild, reinstall, repeat. Convergence is typically 1–3 iterations per build.
+
+## Common patterns and their fixes
+
+- **`UnsatisfiedLinkError: dlopen failed: library "X" not found`** — a class is calling `System.loadLibrary("X")` in its `<clinit>` for a native lib you removed. Stub the `<clinit>` to drop the `loadLibrary` call. Replace the class's `native` methods with no-op Java bodies returning safe defaults.
+- **`RuntimeException: Unable to instantiate provider <FQCN>`** — manifest still references a `<provider>` whose backing class you removed. Remove the provider entry too. Same applies to `<service>` and `<receiver>`.
+- **`NullPointerException` from a method that should have returned a real value** — VMP'd method without the native lib backing it. There's no smali fix; pivot.
+- **`INSTALL_FAILED_UPDATE_INCOMPATIBLE`** — signing certificate mismatch versus the installed copy. `adb uninstall <pkg>` first, or rename the package to coexist.
+
+## Smali stubbing recipe
+
+To make a method a no-op while preserving its signature, annotations, and parameter directives:
+
+- Keep the `.method` line, all `.annotation` blocks, and `.param` directives untouched.
+- Replace the body with a minimal return.
+- Set `.locals` to the smallest count needed for the return value.
+
+| Return type | Body |
+|-------------|------|
+| `V` (void) | `.locals 0` then `return-void` |
+| `L...;` (object) | `.locals 1` / `const/4 v0, 0x0` / `return-object v0` |
+| `I` `Z` `B` `S` `C` | `.locals 1` / `const/4 v0, 0x0` / `return v0` |
+| `J` (long) | `.locals 2` / `const-wide/16 v0, 0x0` / `return-wide v0` |
+| `D` (double) | `.locals 2` / `const-wide/16 v0, 0x0` / `return-wide v0` |
+| `F` (float) | `.locals 1` / `const/4 v0, 0x0` / `return v0` |
+
+Don't touch other methods. Don't strip annotations — some are read by reflection.
+
+## Manifest scrub regex
+
+The package-name prefix list below catches >95% of ad/tracking SDK surface across mainstream Play Store apps:
+
+```
+com.google.android.gms.ads
+com.google.android.gms.measurement
+com.google.android.datatransport
+com.google.firebase.messaging
+com.google.firebase.iid
+com.google.android.play.core
+com.applovin
+com.facebook.ads
+com.facebook.appevents
+com.facebook.internal
+com.vungle
+com.yandex.mobile.ads
+com.yandex.metrica
+io.appmetrica
+com.my.target
+com.bytedance
+com.mbridge
+com.inmobi
+sg.bigo.ads
+com.moloco.sdk
+com.pgl.sys
+com.bykv
+com.iab
+com.appsflyer
+com.dmobin
+com.pairip.licensecheck
+com.adcolony
+com.ironsource
+com.chartboost
+com.tapjoy
+com.fyber
+com.unity3d.services.ads
+com.unity3d.ads
+com.unity3d.services.core
+```
+
+Apply prefix-match against `android:name` for `<provider>`, `<activity>`, `<activity-alias>`, `<receiver>`, `<service>`. Apply also against `<meta-data>` `android:name` for the SDK-specific prefixes (`com.google.android.gms.ads.`, `com.facebook.sdk.`, `com.bytedance.sdk.`, `com.applovin.`, `com.appsflyer.`, `com.unity3d.services.core.configuration.`).
+
+## Things that did NOT work and why
+
+- **Misleading mirror filenames.** A filename like `launcher.apk` may hide an `application-id` for an entirely different package (an app-store wrapper, a different developer's clone). **Always run `apkanalyzer manifest application-id <file>` first** to confirm what package you're actually holding before any other work.
+- **Mirror xapks for arm64-only phones.** Mirror sites regularly hand out v7a-only xapks. Always verify ABI before downloading, not after extracting.
+- **Stubbing `VMRunner.invoke` to return null on a VMP build.** Got past the initial `UnsatisfiedLinkError` but immediately surfaced cascading NPEs in protobuf parsers and `Service.onCreate` paths that depend on real return values from VMP'd methods. There is no general fix — abandon and pivot.
+- **Trying to rebuild config splits with apktool.** Apktool can't reassemble splits as installable APKs; their manifests lack `<application>` and the install pipeline rejects the rebuilt artefact. Embed the libs into the base instead.
+- **`brew install --cask temurin`.** Needs sudo for the pkg installer; fails in any non-interactive environment. Use `openjdk@21` formula.
+
+## Reproducible playbook
+
+1. `adb shell pm path <package>` → `adb pull` to get a guaranteed-correct architecture build with native libs included.
+2. `apkanalyzer manifest application-id <apk>` — confirm you have the package you think you have.
+3. `unzip -l <split>.apk | grep "lib/"` — confirm ABI matches device.
+4. `apktool d -f <apk> -o decoded`.
+5. Inspect for VMP Pairip: `find decoded/smali* -path "*com/pairip*" -name "VMRunner.smali"`. If present, abort and find a non-VMP build (or use the on-device APK which has the matching native lib).
+6. Stub `SignatureCheck.verifyIntegrity` (and any sibling verifiers) to `return-void`.
+7. Run the manifest scrubber against the prefix list above.
+8. Stub SDK init methods: `MobileAds.initialize`, `AudienceNetworkAds.initialize`, `PAGSdk.init`, AppLovin, AppsFlyer, etc.
+9. Optional: rename package + label for coexistence (manifest, authorities, permissions, smali string literals).
+10. Embed `lib/<abi>/*.so` from the ABI split into `decoded/lib/<abi>/`.
+11. Drop `requiredSplitTypes` and `isSplitRequired` from manifest; set `extractNativeLibs="true"`.
+12. `apktool b decoded` → `zipalign -p -f 4 in.apk out.apk` → `apksigner sign --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true`.
+13. `adb install -r out.apk`.
+14. Smoke-test via `monkey`, read `adb logcat -b crash`, patch the one specific failure, rebuild. Expect 1–3 iterations.
+
+## Toolchain setup
+
+See "Toolchain setup on macOS (no sudo path)" above.
+
+## Constraints and gotchas
+
+- Modding for personal use is a grey zone in most jurisdictions; redistribution of modded APKs is clearly infringing on the upstream developer's rights and Play Store terms. Keep work local to the device it was built for. Do not redistribute build artefacts.
+- BSD `sed -i` requires `sed -i '' ...`; GNU sed rejects this. Detect with `[[ "$OSTYPE" == "darwin"* ]]` if portability is needed.
+- `apksigner` v1/v2/v3 flags must all be enabled for installs on Android 11+; v3 alone fails on some OEM ROMs.

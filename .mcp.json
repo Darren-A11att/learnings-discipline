@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "learnings": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/mcp/index.js"],
+      "env": {
+        "LEARNINGS_PROJECT_DIR": "${CLAUDE_PROJECT_DIR}"
+      }
+    }
+  }
+}
